@@ -1,22 +1,186 @@
 <!DOCTYPE html>
-<html lang="eng">
-	<head>
-		<title>heart</title>
-    <link rel="stylesheet" href="function-heart.css">
-		<meta charset="utf-8">
-	</head>
-	<body>
-      <br>
-    <div id="obal">
-      <canvas id="c"></canvas>
-      <script>
-        var b = document.body;
-        var c = document.getElementsByTagName('canvas')[0];
-        var a = c.getContext('2d');
-        document.body.clientWidth; 
-      </script>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animated Heart with SIS</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Arial Black', sans-serif;
+        }
+
+        .sis-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .sis-text {
+            font-size: 8vw;
+            font-weight: 900;
+            background: linear-gradient(
+                45deg,
+                hsl(330, 100%, 50%),
+                hsl(280, 100%, 60%),
+                hsl(260, 100%, 70%)
+            );
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 15px rgba(255, 50, 150, 0.5);
+            animation: 
+                float 3s ease-in-out infinite,
+                glow 2s ease-in-out infinite,
+                colorShift 5s linear infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        @keyframes glow {
+            0%, 100% { opacity: 0.9; }
+            50% { opacity: 1; text-shadow: 0 0 30px rgba(255,50,150,0.8); }
+        }
+
+        @keyframes colorShift {
+            0% { filter: hue-rotate(0deg); }
+            100% { filter: hue-rotate(360deg); }
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        @media (max-width: 768px) {
+            .sis-text {
+                font-size: 15vw;
+                text-shadow: 0 0 10px rgba(255, 50, 150, 0.6);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sis-container">
+        <div class="sis-text">SIS</div>
     </div>
-    <script src="function-heart.js"></script>
-  </body>
-      
+    <canvas id="c"></canvas>
+
+    <script>
+        window.addEventListener('load', () => {
+            const c = document.getElementById('c');
+            const a = c.getContext('2d');
+            let e = [];
+            let h = [];
+            const O = c.width = innerWidth;
+            const Q = c.height = innerHeight;
+            const v = 32;
+            const M = Math;
+            const R = M.random;
+            const C = M.cos;
+            const Y = 6.3;
+
+            // Create heart path
+            for(let i = 0; i < Y; i += .2) {
+                h.push([
+                    O/2 + 180*M.pow(M.sin(i), 3),
+                    Q/2 + 10 * (-(15*C(i) - 5*C(2*i) - 2*C(3*i) - C(4*i)))
+                ]);
+            }
+
+            // Initialize particles
+            for(let i = 0; i < v; i++) {
+                const x = R() * O;
+                const y = R() * Q;
+                const H = i/v * 80 + 280;
+                const S = R() * 40 + 60;
+                const B = R() * 60 + 20;
+                
+                const f = [];
+                for(let k = 0; k < v; k++) {
+                    f.push({
+                        x: x,
+                        y: y,
+                        X: 0,
+                        Y: 0,
+                        R: (1 - k/v) + 1,
+                        S: R() + 1,
+                        q: ~~(R() * v),
+                        D: i%2*2-1,
+                        F: R() * .2 + .7,
+                        f: `hsla(${~~H},${~~S}%,${~~B}%,.1)`
+                    });
+                }
+                e.push(f);
+            }
+
+            function render(_) {
+                a.fillStyle = _.f;
+                a.beginPath();
+                a.arc(_.x, _.y, _.R, 0, Y, 1);
+                a.closePath();
+                a.fill();
+            }
+
+            function loop() {
+                a.fillStyle = "rgba(0,0,0,.2)";
+                a.fillRect(0, 0, O, Q);
+
+                e.forEach((f, i) => {
+                    const u = f[0];
+                    const q = h[u.q];
+                    const D = u.x - q[0];
+                    const E = u.y - q[1];
+                    const G = M.sqrt(D * D + E * E);
+
+                    if(G < 10) {
+                        if(R() > .95) {
+                            u.q = ~~(R() * v);
+                        } else {
+                            if(R() > .99) u.D *= -1;
+                            u.q += u.D;
+                            u.q %= v;
+                            if(u.q < 0) u.q += v;
+                        }
+                    }
+
+                    u.X += -D / G * u.S;
+                    u.Y += -E / G * u.S;
+                    u.x += u.X;
+                    u.y += u.Y;
+                    render(u);
+                    u.X *= u.F;
+                    u.Y *= u.F;
+
+                    for(let k = 0; k < v-1; k++) {
+                        const T = f[k];
+                        const N = f[k + 1];
+                        N.x -= (N.x - T.x) * .7;
+                        N.y -= (N.y - T.y) * .7;
+                        render(N);
+                    }
+                });
+            }
+
+            (function animate() {
+                loop();
+                requestAnimationFrame(animate);
+            })();
+
+            window.addEventListener('resize', () => {
+                c.width = innerWidth;
+                c.height = innerHeight;
+            });
+        });
+    </script>
+</body>
 </html>
